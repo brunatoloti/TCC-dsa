@@ -11,8 +11,6 @@ st.set_page_config(page_title="Cardápio semanal", layout="wide")
 df = pd.read_excel("./data/diet.xlsx")
 df_contraints = pd.read_excel("./data/diet - contraints.xlsx")
 
-# df["deletar"] = [False for i in range(df.shape[0])]
-
 list_food = df['Foods'].sort_values().unique().tolist()
 
 st.header("Cálculo do cardápio semanal de custo mínimo")
@@ -28,30 +26,59 @@ if 'price' not in st.session_state:
 a1,a2,a3 = st.columns([5, 0.25, 2])
 
 with st.sidebar:
-    st.subheader('Inclusão de alimentos usados na escola e seus preços no dia da pesquisa')
+    st.subheader('Seleção de alimentos usados na escola e seus preços no dia da pesquisa')
 
-    food = st.selectbox("Selecione o alimento:", list_food, index=None, placeholder='')
+    # de acordo com a PNAE
+    list_ages = ["4 - 5 anos", "6 - 10 anos", "11 - 15 anos", "16 - 18 anos"]
+    ages = st.selectbox("Selecione a faixa etária:", list_ages, index=None, placeholder='')
+    meals_period = ["Parcial manhã - 1 refeição por dia", "Parcial tarde - 1 refeição por dia",
+                    "Parcial manhã - 2 refeições por dia", "Parcial tarde - 2 refeições por dia",
+                    "Integral - 3 refeições por dia", "Integral - 4 refeições por dia"]
 
-    st.text_input("Preço/Kg corrente:", key='price_selection', on_change=submit_price, placeholder='Digite...')
-    price = st.session_state.price
+    qt_meals = st.selectbox("Selecione o período e a quantidade de refeições diárias:",
+                            meals_period,
+                            index=None, placeholder='')
+    
+    if qt_meals == "Parcial manhã - 1 refeição por dia":
+        meals = ['Lanche da manhã']
+    elif qt_meals == "Parcial tarde - 1 refeição por dia":
+        meals = ['Lanche da tarde']
+    elif qt_meals == "Parcial manhã - 2 refeições por dia":
+        meals = ['Lanche da manhã', 'Almoço']
+    elif qt_meals == "Parcial tarde - 2 refeições por dia":
+        meals = ['Lanche da tarde', 'Jantar']
+    elif qt_meals == "Integral - 3 refeições por dia":
+        meals = ['Lanche da manhã', 'Almoço', 'Lanche da tarde']
+    else:
+        meals = ['Lanche da manhã', 'Almoço', 'Lanche da tarde', 'Jantar']
 
-    p_isnumber = False
-    if price != "":
-        try:
-            price = float(price)
-            p_isnumber = True
-        except:
-            st.error("Preço deve ser um número!")
+    food = st.selectbox("Selecione os alimentos usados na escola:", list_food, 
+                        index=None, placeholder='Selecione...', key='food_selection')
 
-    delete = False
-    df_temp = pd.DataFrame({"deletar": [delete],
-                            "alimento": [food],
-                            "preço": [price]})
+    if food in list_food:
+        meal_type_selection = st.selectbox("Selecione a refeição para qual esse alimento será usado:", meals,
+                                           index=None, placeholder='', key='meal_selection')
+        st.text_input("Preço/Kg corrente:", key='price_selection', on_change=submit_price, placeholder='Digite...')
+        price = st.session_state.price
 
-    if st.button("Adicionar alimento e preço") and p_isnumber == True and food != '':
-        st.session_state.price = ''
-        st.session_state.df = pd.concat([st.session_state.df, df_temp])
-        st.toast("Adicionado.")
+        p_isnumber = False
+        if price != "":
+            try:
+                price = float(price)
+                p_isnumber = True
+            except:
+                st.error("Preço deve ser um número!")
+
+        delete = False
+        df_temp = pd.DataFrame({"deletar": [delete],
+                                "alimento": [food],
+                                "preço": [price],
+                                "refeição": [meal_type_selection]})
+
+        if st.button("Adicionar alimento e preço") and p_isnumber == True and food != '':
+            st.session_state.price = ''
+            st.session_state.df = pd.concat([st.session_state.df, df_temp])
+            st.toast("Adicionado.")
 
     if 'df' not in st.session_state:
         st.session_state.df.copy()
@@ -71,13 +98,9 @@ with st.sidebar:
 
     st.subheader('Informações adicionais')
 
-    rice = st.radio("Deve ter arroz todos os dias?", ["Sim", "Não"])
-    bean = st.radio("Deve ter feijão todos os dias?", ["Sim", "Não"])
-
-    # de acordo com a PNAE
-    list_ages = ["7 - 11 meses", "1 - 3 anos", "4 - 5 anos", 
-                 "6 - 10 anos", "11 - 15 anos", "16 - 18 anos"]
-    ages = st.selectbox("Selecione a faixa etária:", list_ages, index=None, placeholder='')
+    rice = st.radio("Deve ter arroz todos os dias?", ["Sim", "Não"], horizontal=True)
+    bean = st.radio("Deve ter feijão todos os dias?", ["Sim", "Não"], horizontal=True)
+    days = st.selectbox("Quantidade de dias para calcular o cardápio:", [1, 2, 3, 4, 5], index=None, placeholder='')
         
     if st.button("Salvar tudo e calcular o cardápio semanal de custo mínimo."):
         st.toast("OK")
