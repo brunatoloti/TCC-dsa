@@ -30,14 +30,14 @@ with st.sidebar:
 
     # de acordo com a PNAE
     list_ages = ["4 - 5 anos", "6 - 10 anos", "11 - 15 anos", "16 - 18 anos"]
-    ages = st.selectbox("Selecione a faixa etária:", list_ages, index=None, placeholder='')
+    ages = st.selectbox("Selecione a faixa etária:", list_ages, index=None, placeholder='Selecione...')
     meals_period = ["Parcial manhã - 1 refeição por dia", "Parcial tarde - 1 refeição por dia",
                     "Parcial manhã - 2 refeições por dia", "Parcial tarde - 2 refeições por dia",
                     "Integral - 3 refeições por dia", "Integral - 4 refeições por dia"]
 
     qt_meals = st.selectbox("Selecione o período e a quantidade de refeições diárias:",
                             meals_period,
-                            index=None, placeholder='')
+                            index=None, placeholder='Selecione...')
     
     if qt_meals == "Parcial manhã - 1 refeição por dia":
         meals = ['Lanche da manhã']
@@ -85,7 +85,7 @@ with st.sidebar:
 
     if st.toggle("Mostrar os alimentos adicionados"):
         st.session_state.df = st.data_editor(st.session_state.df
-                                             .drop_duplicates(subset=["alimento"], keep='last')
+                                             .drop_duplicates(subset=["alimento", "refeição"], keep='last')
                                              .reset_index(drop=True),
                                              column_config={
                                                  "deletar": st.column_config.CheckboxColumn("deletar", default=False)
