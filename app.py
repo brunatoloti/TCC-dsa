@@ -8,10 +8,10 @@ def submit_price():
 
 st.set_page_config(page_title="Cardápio semanal", layout="wide")
 
-df = pd.read_excel("./data/diet.xlsx")
-df_contraints = pd.read_excel("./data/diet - contraints.xlsx")
+df = pd.read_excel("./data/alimentos.xlsx")
+df_contraints = pd.read_excel("./data/alimentos_restricoes.xlsx")
 
-list_food = df['Foods'].sort_values().unique().tolist()
+list_food = df['Alimento'].sort_values().unique().tolist()
 
 st.header("Cálculo do cardápio semanal de custo mínimo")
 st.divider()
@@ -58,7 +58,7 @@ with st.sidebar:
     if food in list_food:
         meal_type_selection = st.selectbox("Selecione a refeição para qual esse alimento será usado:", meals,
                                            index=None, placeholder='', key='meal_selection')
-        st.text_input("Preço/Kg corrente:", key='price_selection', on_change=submit_price, placeholder='Digite...')
+        st.text_input("Preço/100g corrente:", key='price_selection', on_change=submit_price, placeholder='Digite...')
         price = st.session_state.price
 
         p_isnumber = False
@@ -99,57 +99,67 @@ with st.sidebar:
     st.subheader('Informações adicionais')
 
     rice = st.radio("Deve ter arroz todos os dias?", ["Sim", "Não"], horizontal=True)
+    rice_var = ''
+    food_vars_rice = {}
     bean = st.radio("Deve ter feijão todos os dias?", ["Sim", "Não"], horizontal=True)
+    bean_var = ''
+    food_vars_bean = {}
     days = st.selectbox("Quantidade de dias para calcular o cardápio:", [1, 2, 3, 4, 5], index=None, placeholder='')
         
     if st.button("Salvar tudo e calcular o cardápio semanal de custo mínimo."):
         st.toast("OK")
         with a1:
-            df_merge = st.session_state.df[["alimento", "preço"]].merge(df, left_on='alimento', right_on='Foods')
+            df_merge = st.session_state.df[["alimento", "preço"]].merge(df, left_on='alimento', right_on='Alimento')
 
             prob = LpProblem("Simple_Diet_Problem", LpMinimize)
-            food_items = list(df_merge['Foods'])
+            food_items = list(df_merge['Alimento'])
             st.text(food_items)
             costs = dict(zip(food_items, df_merge['preço']))
-            calories = dict(zip(food_items, df_merge['Calories']))
-            cholesterol = dict(zip(food_items, df_merge['Cholesterol (mg)']))
-            fat = dict(zip(food_items, df_merge['Total_Fat (g)']))
-            protein = dict(zip(food_items, df_merge['Protein (g)']))
-            fiber = dict(zip(food_items, df_merge['Dietary_Fiber (g)']))
-            sodium = dict(zip(food_items, df_merge['Sodium (mg)']))
-            vit_a = dict(zip(food_items, df_merge['Vit_A (IU)']))
-            calcium = dict(zip(food_items, df_merge['Calcium (mg)']))
-            iron = dict(zip(food_items, df_merge['Iron (mg)']))
-            vit_c = dict(zip(food_items, df_merge['Vit_C (IU)']))
-            carbs = dict(zip(food_items, df_merge['Carbohydrates (g)']))
+            energy = dict(zip(food_items, df_merge['Energia (kcal)']))
+            protein = dict(zip(food_items, df_merge['Proteínas (g)']))
+            carbs = dict(zip(food_items, df_merge['Carboidratos (g)']))
+            lip = dict(zip(food_items, df_merge['Lipídios (g)']))
 
-            food_vars = LpVariable.dicts("Food", food_items, lowBound=0, cat='Integer') # ou Continuous
+            if rice == 'Sim':
+                for f in food_items:
+                    if 'Arroz' in f:
+                        rice_var = f
+                        food_vars_rice = LpVariable.dicts("Rice", [rice_var], lowBound=0.5, cat='Continuous') # ou Integer
+                        break
+                st.text(food_vars_rice)
+            if bean == 'Sim':
+                for f in food_items:
+                    if 'Feijão' in f:
+                        bean_var = f
+                        food_vars_bean = LpVariable.dicts("Bean", [bean_var], lowBound=0.17, cat='Continuous') # ou Integer
+                        break
+            food_vars = LpVariable.dicts("Food", [i for i in food_items if i not in [rice_var, bean_var]], lowBound=0, cat='Continuous') # ou Integer
+            st.text(food_vars)
+            food_vars.update(food_vars_rice)
+            food_vars.update(food_vars_bean)
             st.text(food_vars)
 
             prob += lpSum([costs[i]*food_vars[i] for i in food_items])
             st.text(prob)
 
-            prob += lpSum([calories[f] * food_vars[f] for f in food_items]) >= df_contraints.loc[0, 'Calories'] # limite inferior
-            prob += lpSum([calories[f] * food_vars[f] for f in food_items]) <= df_contraints.loc[1, 'Calories'] # limite superior
+            prob += lpSum([energy[f] * food_vars[f] for f in food_items]) >= df_contraints.loc[0, 'Energia'] # limite inferior
+            prob += lpSum([energy[f] * food_vars[f] for f in food_items]) <= df_contraints.loc[1, 'Energia'] # limite superior
 
-            prob += lpSum([fat[f] * food_vars[f] for f in food_items]) >= df_contraints.loc[0, 'Total_Fat (g)'] # limite inferior
-            prob += lpSum([fat[f] * food_vars[f] for f in food_items]) <= df_contraints.loc[1, 'Total_Fat (g)'] # limite superior
+            prob += lpSum([protein[f] * food_vars[f] for f in food_items]) >= df_contraints.loc[0, 'Proteinas'] # limite inferior
+            prob += lpSum([protein[f] * food_vars[f] for f in food_items]) <= df_contraints.loc[1, 'Proteinas'] # limite superior
 
-            prob += lpSum([protein[f] * food_vars[f] for f in food_items]) >= df_contraints.loc[0, 'Protein (g)'] # limite inferior
-            prob += lpSum([protein[f] * food_vars[f] for f in food_items]) <= df_contraints.loc[1, 'Protein (g)'] # limite superior
+            prob += lpSum([carbs[f] * food_vars[f] for f in food_items]) >= df_contraints.loc[0, 'Carboidratos'] # limite inferior
+            prob += lpSum([carbs[f] * food_vars[f] for f in food_items]) <= df_contraints.loc[1, 'Carboidratos'] # limite superior
 
-            prob += lpSum([fiber[f] * food_vars[f] for f in food_items]) >= df_contraints.loc[0, 'Dietary_Fiber (g)'] # limite inferior
-            prob += lpSum([fiber[f] * food_vars[f] for f in food_items]) <= df_contraints.loc[1, 'Dietary_Fiber (g)'] # limite superior
-
-            prob += lpSum([carbs[f] * food_vars[f] for f in food_items]) >= df_contraints.loc[0, 'Carbohydrates (g)'] # limite inferior
-            prob += lpSum([carbs[f] * food_vars[f] for f in food_items]) <= df_contraints.loc[1, 'Carbohydrates (g)'] # limite superior
+            prob += lpSum([lip[f] * food_vars[f] for f in food_items]) >= df_contraints.loc[0, 'Lipidios'] # limite inferior
+            prob += lpSum([lip[f] * food_vars[f] for f in food_items]) <= df_contraints.loc[1, 'Lipidios'] # limite superior
             st.text(prob)
 
 
             status = prob.solve()
             st.text(f"Status -> {LpStatus[status]}")
             for v in prob.variables():
-                if v.varValue >= 0:
+                if v.varValue > 0:
                     st.text(f'{v.name} = {v.varValue:.4f}')
             obj = value(prob.objective)
             st.text(f"{obj}")
