@@ -119,7 +119,6 @@ with st.sidebar:
 
             prob = LpProblem("Simple_Diet_Problem", LpMinimize)
             food_items = list(df_merge['Alimento'])
-            st.text(food_items)
             costs = dict(zip(food_items, df_merge['preço']))
             energy = dict(zip(food_items, df_merge['Energia (kcal)']))
             protein = dict(zip(food_items, df_merge['Proteínas (g)']))
@@ -132,7 +131,6 @@ with st.sidebar:
                         rice_var = f
                         food_vars_rice = LpVariable.dicts("Rice", [rice_var], lowBound=0.5, cat='Continuous') # ou Integer
                         break
-                st.text(food_vars_rice)
             if bean == 'Sim':
                 for f in food_items:
                     if 'Feijão' in f:
@@ -140,13 +138,10 @@ with st.sidebar:
                         food_vars_bean = LpVariable.dicts("Bean", [bean_var], lowBound=0.17, cat='Continuous') # ou Integer
                         break
             food_vars = LpVariable.dicts("Food", [i for i in food_items if i not in [rice_var, bean_var]], lowBound=0, cat='Continuous') # ou Integer
-            st.text(food_vars)
             food_vars.update(food_vars_rice)
             food_vars.update(food_vars_bean)
-            st.text(food_vars)
 
             prob += lpSum([costs[i]*food_vars[i] for i in food_items])
-            st.text(prob)
 
             df_contraints_age_range = df_contraints.query(f"`Faixa etaria` == '{ages}'").reset_index()
             prob += lpSum([energy[f] * food_vars[f] for f in food_items]) >= df_contraints_age_range.loc[loc_contraints, 'Energia'] # limite inferior
@@ -160,13 +155,17 @@ with st.sidebar:
 
             prob += lpSum([lip[f] * food_vars[f] for f in food_items]) >= df_contraints_age_range.loc[loc_contraints, 'Lipidios'] # limite inferior
             prob += lpSum([lip[f] * food_vars[f] for f in food_items]) <= df_contraints_age_range.loc[loc_contraints + 1, 'Lipidios'] # limite superior
-            st.text(prob)
 
 
             status = prob.solve()
             st.text(f"Status -> {LpStatus[status]}")
+            food_selected = []
+            qtd_food_selected = []
             for v in prob.variables():
                 if v.varValue > 0:
-                    st.text(f'{v.name} = {v.varValue:.4f}')
+                    food_selected.append(v.name)
+                    qtd_food_selected.append(round(v.varValue, 4))
             obj = value(prob.objective)
-            st.text(f"{obj}")
+            st.text(f"Custo -> {obj}")
+            df_result = pd.DataFrame({'alimento': food_selected, 'qtd (g)': qtd_food_selected})
+            st.data_editor(df_result)
