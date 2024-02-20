@@ -1,5 +1,6 @@
 import pandas as pd
 from pulp import *
+import random
 import streamlit as st
 
 def submit_price():
@@ -116,56 +117,75 @@ with st.sidebar:
         st.toast("OK")
         with a1:
             df_merge = st.session_state.df[["alimento", "preço"]].merge(df, left_on='alimento', right_on='Alimento')
-
-            prob = LpProblem("Simple_Diet_Problem", LpMinimize)
+            df_result = pd.DataFrame()
             food_items = list(df_merge['Alimento'])
-            costs = dict(zip(food_items, df_merge['preço']))
-            energy = dict(zip(food_items, df_merge['Energia (kcal)']))
-            protein = dict(zip(food_items, df_merge['Proteínas (g)']))
-            carbs = dict(zip(food_items, df_merge['Carboidratos (g)']))
-            lip = dict(zip(food_items, df_merge['Lipídios (g)']))
+            food_items_copy = food_items.copy()
+            for j in range(0, days):
+                st.text(food_items)
+                st.text(food_items_copy)
+                prob = LpProblem("Simple_Diet_Problem", LpMinimize)
+                df_merge_filtered = df_merge.query(f"alimento in {food_items_copy}")
+                costs = dict(zip(food_items_copy, df_merge_filtered['preço']))
+                energy = dict(zip(food_items_copy, df_merge_filtered['Energia (kcal)']))
+                protein = dict(zip(food_items_copy, df_merge_filtered['Proteínas (g)']))
+                carbs = dict(zip(food_items_copy, df_merge_filtered['Carboidratos (g)']))
+                lip = dict(zip(food_items_copy, df_merge_filtered['Lipídios (g)']))
+                st.text(lip)
 
-            if rice == 'Sim':
-                for f in food_items:
-                    if 'Arroz' in f:
-                        rice_var = f
-                        food_vars_rice = LpVariable.dicts("Rice", [rice_var], lowBound=0.5, cat='Continuous') # ou Integer
-                        break
-            if bean == 'Sim':
-                for f in food_items:
-                    if 'Feijão' in f:
-                        bean_var = f
-                        food_vars_bean = LpVariable.dicts("Bean", [bean_var], lowBound=0.17, cat='Continuous') # ou Integer
-                        break
-            food_vars = LpVariable.dicts("Food", [i for i in food_items if i not in [rice_var, bean_var]], lowBound=0, cat='Continuous') # ou Integer
-            food_vars.update(food_vars_rice)
-            food_vars.update(food_vars_bean)
+                if rice == 'Sim':
+                    for f in food_items_copy:
+                        if 'Arroz' in f:
+                            rice_var = f
+                            food_vars_rice = LpVariable.dicts("Rice", [rice_var], lowBound=0.5, cat='Continuous') # ou Integer
+                            break
+                if bean == 'Sim':
+                    for f in food_items_copy:
+                        if 'Feijão' in f:
+                            bean_var = f
+                            food_vars_bean = LpVariable.dicts("Bean", [bean_var], lowBound=0.17, cat='Continuous') # ou Integer
+                            break
+                food_vars = LpVariable.dicts("Food", [i for i in food_items_copy if i not in [rice_var, bean_var]], lowBound=0, cat='Continuous') # ou Integer
+                food_vars.update(food_vars_rice)
+                food_vars.update(food_vars_bean)
 
-            prob += lpSum([costs[i]*food_vars[i] for i in food_items])
+                prob += lpSum([costs[i]*food_vars[i] for i in food_items_copy])
 
-            df_contraints_age_range = df_contraints.query(f"`Faixa etaria` == '{ages}'").reset_index()
-            prob += lpSum([energy[f] * food_vars[f] for f in food_items]) >= df_contraints_age_range.loc[loc_contraints, 'Energia'] # limite inferior
-            prob += lpSum([energy[f] * food_vars[f] for f in food_items]) <= df_contraints_age_range.loc[loc_contraints + 1, 'Energia'] # limite superior
+                df_contraints_age_range = df_contraints.query(f"`Faixa etaria` == '{ages}'").reset_index()
+                prob += lpSum([energy[f] * food_vars[f] for f in food_items_copy]) >= df_contraints_age_range.loc[loc_contraints, 'Energia'] # limite inferior
+                prob += lpSum([energy[f] * food_vars[f] for f in food_items_copy]) <= df_contraints_age_range.loc[loc_contraints + 1, 'Energia'] # limite superior
 
-            prob += lpSum([protein[f] * food_vars[f] for f in food_items]) >= df_contraints_age_range.loc[loc_contraints, 'Proteinas'] # limite inferior
-            prob += lpSum([protein[f] * food_vars[f] for f in food_items]) <= df_contraints_age_range.loc[loc_contraints + 1, 'Proteinas'] # limite superior
+                prob += lpSum([protein[f] * food_vars[f] for f in food_items_copy]) >= df_contraints_age_range.loc[loc_contraints, 'Proteinas'] # limite inferior
+                prob += lpSum([protein[f] * food_vars[f] for f in food_items_copy]) <= df_contraints_age_range.loc[loc_contraints + 1, 'Proteinas'] # limite superior
 
-            prob += lpSum([carbs[f] * food_vars[f] for f in food_items]) >= df_contraints_age_range.loc[loc_contraints, 'Carboidratos'] # limite inferior
-            prob += lpSum([carbs[f] * food_vars[f] for f in food_items]) <= df_contraints_age_range.loc[loc_contraints + 1, 'Carboidratos'] # limite superior
+                prob += lpSum([carbs[f] * food_vars[f] for f in food_items_copy]) >= df_contraints_age_range.loc[loc_contraints, 'Carboidratos'] # limite inferior
+                prob += lpSum([carbs[f] * food_vars[f] for f in food_items_copy]) <= df_contraints_age_range.loc[loc_contraints + 1, 'Carboidratos'] # limite superior
 
-            prob += lpSum([lip[f] * food_vars[f] for f in food_items]) >= df_contraints_age_range.loc[loc_contraints, 'Lipidios'] # limite inferior
-            prob += lpSum([lip[f] * food_vars[f] for f in food_items]) <= df_contraints_age_range.loc[loc_contraints + 1, 'Lipidios'] # limite superior
+                prob += lpSum([lip[f] * food_vars[f] for f in food_items_copy]) >= df_contraints_age_range.loc[loc_contraints, 'Lipidios'] # limite inferior
+                prob += lpSum([lip[f] * food_vars[f] for f in food_items_copy]) <= df_contraints_age_range.loc[loc_contraints + 1, 'Lipidios'] # limite superior
+                st.text(prob)
 
-
-            status = prob.solve()
-            st.text(f"Status -> {LpStatus[status]}")
-            food_selected = []
-            qtd_food_selected = []
-            for v in prob.variables():
-                if v.varValue > 0:
-                    food_selected.append(v.name)
-                    qtd_food_selected.append(round(v.varValue, 4))
-            obj = value(prob.objective)
-            st.text(f"Custo -> {obj}")
-            df_result = pd.DataFrame({'alimento': food_selected, 'qtd (g)': qtd_food_selected})
+                status = prob.solve()
+                st.text(f"Status -> {LpStatus[status]}")
+                food_selected = []
+                qtd_food_selected = []
+                for v in prob.variables():
+                    if v.varValue > 0:
+                        food_selected.append(v.name.replace('Food', '').replace('Rice', '').replace('Bean', '').replace('_', ' ').strip())
+                        qtd_food_selected.append(round(v.varValue, 4))
+                obj = value(prob.objective)
+                st.text(f"Custo -> {obj}")
+                df_result_temp = pd.DataFrame({'alimento': food_selected, 'qtd (g)': qtd_food_selected, 'day': j})
+                df_result = pd.concat([df_result, df_result_temp])
+                if rice == 'Sim' and bean == 'Sim':
+                    food_selected_removed = [fs for fs in food_selected if 'Arroz' not in fs and 'Feijão' not in fs]
+                elif rice == 'Sim' and bean == 'Não': 
+                    food_selected_removed = [fs for fs in food_selected if 'Arroz' not in fs]
+                elif rice == 'Não' and bean == 'Sim':
+                    food_selected_removed = [fs for fs in food_selected if 'Feijão' not in fs]
+                else:
+                    food_selected_removed = food_selected.copy()
+                food_items_random = random.sample(food_selected_removed, 2)
+                food_items_copy = food_items.copy()
+                for fi in food_items_random:
+                    food_items_copy.remove(fi)
             st.data_editor(df_result)
