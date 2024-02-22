@@ -3,6 +3,8 @@ from pulp import *
 import random
 import streamlit as st
 
+from utils import create_list
+
 def submit_price():
     st.session_state.price = st.session_state.price_selection
     st.session_state.price_selection = ""
@@ -116,7 +118,7 @@ with st.sidebar:
     if st.button("Salvar tudo e calcular o cardápio semanal de custo mínimo."):
         st.toast("OK")
         with a1:
-            df_merge = st.session_state.df[["alimento", "preço"]].merge(df, left_on='alimento', right_on='Alimento')
+            df_merge = st.session_state.df[["alimento", "preço", "refeição"]].merge(df, left_on='alimento', right_on='Alimento')
             df_result = pd.DataFrame()
             food_items = list(df_merge['Alimento'])
             food_items_copy = food_items.copy()
@@ -135,14 +137,22 @@ with st.sidebar:
                 if rice == 'Sim':
                     for f in food_items_copy:
                         if 'Arroz' in f:
+                            if ages == '4 - 5 anos':
+                                qt_rice = 0.3
+                            else:
+                                qt_rice = 0.5
                             rice_var = f
-                            food_vars_rice = LpVariable.dicts("Rice", [rice_var], lowBound=0.5, cat='Continuous') # ou Integer
+                            food_vars_rice = LpVariable.dicts("Rice", [rice_var], lowBound=qt_rice, cat='Continuous') # ou Integer
                             break
                 if bean == 'Sim':
                     for f in food_items_copy:
                         if 'Feijão' in f:
+                            if ages == '4 - 5 anos':
+                                qt_bean = 0.15
+                            else:
+                                qt_bean = 0.25
                             bean_var = f
-                            food_vars_bean = LpVariable.dicts("Bean", [bean_var], lowBound=0.17, cat='Continuous') # ou Integer
+                            food_vars_bean = LpVariable.dicts("Bean", [bean_var], lowBound=qt_bean, cat='Continuous') # ou Integer
                             break
                 food_vars = LpVariable.dicts("Food", [i for i in food_items_copy if i not in [rice_var, bean_var]], lowBound=0, cat='Continuous') # ou Integer
                 food_vars.update(food_vars_rice)
@@ -162,6 +172,27 @@ with st.sidebar:
 
                 prob += lpSum([lip[f] * food_vars[f] for f in food_items_copy]) >= df_contraints_age_range.loc[loc_contraints, 'Lipidios'] # limite inferior
                 prob += lpSum([lip[f] * food_vars[f] for f in food_items_copy]) <= df_contraints_age_range.loc[loc_contraints + 1, 'Lipidios'] # limite superior
+                
+                df_grouped = df_merge_filtered.groupby('refeição')['alimento'].apply(create_list).reset_index()
+                if df_grouped.shape[0] > 1:
+                    for g, row in df_grouped.iterrows():
+                        if row['refeição'] == 'Almoço' and df_grouped.shape[0] == 2:
+                            ref = 2/3
+                        elif row['refeição'] == 'Almoço' and df_grouped.shape[0] == 3:
+                            ref = 3/7
+                        elif 'Lanche' in row['refeição'] and df_grouped.shape[0] == 2:
+                            ref = 1/3
+                        elif 'Lanche' in row['refeição'] and df_grouped.shape[0] == 3:
+                            ref = 2/7
+                        prob += lpSum([energy[f] * food_vars[f] for f in row['alimento']]) >= df_contraints_age_range.loc[loc_contraints, 'Energia']*ref # limite inferior
+                        prob += lpSum([energy[f] * food_vars[f] for f in row['alimento']]) <= df_contraints_age_range.loc[loc_contraints + 1, 'Energia']*ref # limite superior
+                        prob += lpSum([protein[f] * food_vars[f] for f in row['alimento']]) >= df_contraints_age_range.loc[loc_contraints, 'Proteinas']*ref # limite inferior
+                        prob += lpSum([protein[f] * food_vars[f] for f in row['alimento']]) <= df_contraints_age_range.loc[loc_contraints + 1, 'Proteinas']*ref # limite superior
+                        prob += lpSum([carbs[f] * food_vars[f] for f in row['alimento']]) >= df_contraints_age_range.loc[loc_contraints, 'Carboidratos']*ref # limite inferior
+                        prob += lpSum([carbs[f] * food_vars[f] for f in row['alimento']]) <= df_contraints_age_range.loc[loc_contraints + 1, 'Carboidratos']*ref # limite superior
+                        prob += lpSum([lip[f] * food_vars[f] for f in row['alimento']]) >= df_contraints_age_range.loc[loc_contraints, 'Lipidios']*ref # limite inferior
+                        prob += lpSum([lip[f] * food_vars[f] for f in row['alimento']]) <= df_contraints_age_range.loc[loc_contraints + 1, 'Lipidios']*ref # limite superior
+                
                 st.text(prob)
 
                 status = prob.solve()
