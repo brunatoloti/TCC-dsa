@@ -193,6 +193,7 @@ with st.sidebar:
                 obj = value(prob.objective)
                 st.text(f"Custo -> {obj}")
                 df_result_temp = pd.DataFrame({'alimento': food_selected, 'qtd (g)': qtd_food_selected, 'day': j})
+                st.text(df_result_temp)
                 df_result = pd.concat([df_result, df_result_temp])
                 if rice == 'Sim' and bean == 'Sim':
                     food_selected_removed = [fs for fs in food_selected if 'Arroz' not in fs and 'Feijão' not in fs]
@@ -202,8 +203,29 @@ with st.sidebar:
                     food_selected_removed = [fs for fs in food_selected if 'Feijão' not in fs]
                 else:
                     food_selected_removed = food_selected.copy()
-                food_items_random = random.sample(food_selected_removed, 2)
+                st.text(f"food_selected_removed -> {food_selected_removed}")
+                food_selected_removed_lunch_dinner = []
+                food_items_random_lunch_dinner = []
+                food_selected_removed_coffee_1 = []
+                food_items_random_coffee_1 = []
+                food_selected_removed_coffee_2 = []
+                food_items_random_coffee_2 = []
+                for i, row in df_grouped.iterrows():
+                    if row['refeição'] == 'Almoço/Jantar':
+                        food_selected_removed_lunch_dinner = [i for i in row.alimento if i in food_selected_removed]
+                        try:
+                            food_items_random_lunch_dinner = random.sample(food_selected_removed_lunch_dinner, 2)
+                        except:
+                            food_items_random_lunch_dinner = random.sample(food_selected_removed_lunch_dinner, 1)
+                    elif row['refeição'] == 'Lanche da manhã':
+                        food_selected_removed_coffee_1 = [i for i in row.alimento if i in food_selected_removed]
+                        food_items_random_coffee_1 = random.sample(food_selected_removed_coffee_1, 1)
+                    else:
+                        food_selected_removed_coffee_2 = [i for i in row.alimento if i in food_selected_removed]
+                        food_items_random_coffee_2 = random.sample(food_selected_removed_coffee_2, 1)
+                food_items_random = food_items_random_lunch_dinner + food_items_random_coffee_1 + food_items_random_coffee_2
                 food_items_copy = food_items.copy()
+                st.text(f"food_items_random -> {food_items_random}")
                 for fi in food_items_random:
                     food_items_copy.remove(fi)
-            st.data_editor(df_result)
+            st.data_editor(df_result.merge(df_merge[['alimento', 'refeição']], on='alimento').sort_values(by=['day', 'refeição']))
