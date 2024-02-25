@@ -161,15 +161,15 @@ with st.sidebar:
                 
                 df_grouped = df_merge_filtered.groupby('refeição')['alimento'].apply(create_list).reset_index()
                 for g, row in df_grouped.iterrows():
-                    if df_grouped.shape[0] == 1:
+                    if df_grouped.shape[0] == 1 and '1' in qt_meals:
                         ref = 1
-                    elif row['refeição'] == 'Almoço/Jantar' and df_grouped.shape[0] == 2:
+                    elif (row['refeição'] == 'Almoço/Jantar' and df_grouped.shape[0] == 2 and '2' in qt_meals) or row['refeição'] == 'Almoço/Jantar' and df_grouped.shape[0] == 1 and '2' in qt_meals:
                         ref = 2/3
-                    elif row['refeição'] == 'Almoço/Jantar' and df_grouped.shape[0] == 3:
+                    elif (row['refeição'] == 'Almoço/Jantar' and df_grouped.shape[0] == 3 and '3' in qt_meals) or (row['refeição'] == 'Almoço/Jantar' and df_grouped.shape[0] == 2 and '3' in qt_meals) or (row['refeição'] == 'Almoço/Jantar' and df_grouped.shape[0] == 1 and '3' in qt_meals):
                         ref = 3/7
-                    elif 'Lanche' in row['refeição'] and df_grouped.shape[0] == 2:
+                    elif ('Lanche' in row['refeição'] and df_grouped.shape[0] == 2 and '2' in qt_meals) or ('Lanche' in row['refeição'] and df_grouped.shape[0] == 1 and '2' in qt_meals):
                         ref = 1/3
-                    elif 'Lanche' in row['refeição'] and df_grouped.shape[0] == 3:
+                    elif ('Lanche' in row['refeição'] and df_grouped.shape[0] == 3 and '3' in qt_meals) or ('Lanche' in row['refeição'] and df_grouped.shape[0] == 2 and '3' in qt_meals) or ('Lanche' in row['refeição'] and df_grouped.shape[0] == 1 and '3' in qt_meals):
                         ref = 2/7
                     prob += lpSum([energy[f] * food_vars[f] for f in row['alimento']]) >= int(round(df_contraints_age_range.loc[loc_contraints, 'Energia']*ref, 0)) # limite inferior
                     prob += lpSum([energy[f] * food_vars[f] for f in row['alimento']]) <= int(round(df_contraints_age_range.loc[loc_contraints + 1, 'Energia']*ref, 0)) # limite superior
