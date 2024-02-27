@@ -26,7 +26,7 @@ if 'full' not in st.session_state:
 if 'price' not in st.session_state:
     st.session_state.price = ""
 
-a1,a2,a3 = st.columns([5, 0.25, 2])
+a1,a2,a3 = st.columns([5, 0.25, 0.1])
 
 with st.sidebar:
     st.subheader('Seleção de alimentos usados na escola e seus preços no dia da pesquisa')
@@ -49,13 +49,13 @@ with st.sidebar:
         meals = ['Lanche da tarde']
         loc_contraints = 0
     elif qt_meals == "Parcial manhã - 2 refeições por dia":
-        meals = ['Lanche da manhã', 'Almoço/Jantar']
+        meals = ['Lanche da manhã', 'Almoço ou Jantar']
         loc_contraints = 2
     elif qt_meals == "Parcial tarde - 2 refeições por dia":
-        meals = ['Lanche da tarde', 'Almoço/Jantar']
+        meals = ['Lanche da tarde', 'Almoço ou Jantar']
         loc_contraints = 2
     elif qt_meals == "Integral - 3 refeições por dia":
-        meals = ['Lanche da manhã', 'Almoço/Jantar', 'Lanche da tarde']
+        meals = ['Lanche da manhã', 'Almoço ou Jantar', 'Lanche da tarde']
         loc_contraints = 4
 
     food = st.selectbox("Selecione os alimentos usados na escola:", list_food, 
@@ -116,12 +116,12 @@ with st.sidebar:
         st.toast("OK")
         with a1:
             df_merge = st.session_state.df[["alimento", "preço", "refeição"]].merge(df, left_on='alimento', right_on='Alimento')
+            df_merge['alimento'] = df_merge['alimento'] + df_merge['refeição']
             df_result = pd.DataFrame()
-            food_items = list(df_merge['Alimento'])
+            df_costs_status = pd.DataFrame()
+            food_items = list(df_merge['alimento'])
             food_items_copy = food_items.copy()
-            for j in range(0, days):
-                st.text(food_items)
-                st.text(food_items_copy)
+            for j in range(1, days + 1):
                 prob = LpProblem("Simple_Diet_Problem", LpMinimize)
                 df_merge_filtered = df_merge.query(f"alimento in {food_items_copy}")
                 costs = dict(zip(food_items_copy, df_merge_filtered['preço']))
@@ -129,7 +129,6 @@ with st.sidebar:
                 protein = dict(zip(food_items_copy, df_merge_filtered['Proteínas (g)']))
                 carbs = dict(zip(food_items_copy, df_merge_filtered['Carboidratos (g)']))
                 lip = dict(zip(food_items_copy, df_merge_filtered['Lipídios (g)']))
-                st.text(lip)
 
                 if rice == 'Sim':
                     for f in food_items_copy:
@@ -163,9 +162,9 @@ with st.sidebar:
                 for g, row in df_grouped.iterrows():
                     if df_grouped.shape[0] == 1 and '1' in qt_meals:
                         ref = 1
-                    elif (row['refeição'] == 'Almoço/Jantar' and df_grouped.shape[0] == 2 and '2' in qt_meals) or row['refeição'] == 'Almoço/Jantar' and df_grouped.shape[0] == 1 and '2' in qt_meals:
+                    elif (row['refeição'] == 'Almoço ou Jantar' and df_grouped.shape[0] == 2 and '2' in qt_meals) or row['refeição'] == 'Almoço ou Jantar' and df_grouped.shape[0] == 1 and '2' in qt_meals:
                         ref = 2/3
-                    elif (row['refeição'] == 'Almoço/Jantar' and df_grouped.shape[0] == 3 and '3' in qt_meals) or (row['refeição'] == 'Almoço/Jantar' and df_grouped.shape[0] == 2 and '3' in qt_meals) or (row['refeição'] == 'Almoço/Jantar' and df_grouped.shape[0] == 1 and '3' in qt_meals):
+                    elif (row['refeição'] == 'Almoço ou Jantar' and df_grouped.shape[0] == 3 and '3' in qt_meals) or (row['refeição'] == 'Almoço ou Jantar' and df_grouped.shape[0] == 2 and '3' in qt_meals) or (row['refeição'] == 'Almoço ou Jantar' and df_grouped.shape[0] == 1 and '3' in qt_meals):
                         ref = 3/7
                     elif ('Lanche' in row['refeição'] and df_grouped.shape[0] == 2 and '2' in qt_meals) or ('Lanche' in row['refeição'] and df_grouped.shape[0] == 1 and '2' in qt_meals):
                         ref = 1/3
@@ -180,10 +179,8 @@ with st.sidebar:
                     prob += lpSum([lip[f] * food_vars[f] for f in row['alimento']]) >= int(round(df_contraints_age_range.loc[loc_contraints, 'Lipidios']*ref, 0)) # limite inferior
                     prob += lpSum([lip[f] * food_vars[f] for f in row['alimento']]) <= int(round(df_contraints_age_range.loc[loc_contraints + 1, 'Lipidios']*ref, 0)) # limite superior
                 
-                st.text(prob)
-
                 status = prob.solve()
-                st.text(f"Status -> {LpStatus[status]}")
+                status = LpStatus[status]
                 food_selected = []
                 qtd_food_selected = []
                 for v in prob.variables():
@@ -191,10 +188,10 @@ with st.sidebar:
                         food_selected.append(v.name.replace('Food', '').replace('Rice', '').replace('Bean', '').replace('_', ' ').strip())
                         qtd_food_selected.append(round(v.varValue, 4))
                 obj = value(prob.objective)
-                st.text(f"Custo -> {obj}")
-                df_result_temp = pd.DataFrame({'alimento': food_selected, 'qtd (g)': qtd_food_selected, 'day': j})
-                st.text(df_result_temp)
+                df_result_temp = pd.DataFrame({'alimento': food_selected, 'qtd (g)': qtd_food_selected, 'dia': f"dia {j}"})
                 df_result = pd.concat([df_result, df_result_temp])
+                df_costs_status_temp = pd.DataFrame({'dia': f"dia {j}", 'custo': [obj], 'status': status.replace('Infeasible', 'Inviável').replace('Optimal', 'Ótimo')})
+                df_costs_status = pd.concat([df_costs_status, df_costs_status_temp])
                 if rice == 'Sim' and bean == 'Sim':
                     food_selected_removed = [fs for fs in food_selected if 'Arroz' not in fs and 'Feijão' not in fs]
                 elif rice == 'Sim' and bean == 'Não': 
@@ -204,28 +201,37 @@ with st.sidebar:
                 else:
                     food_selected_removed = food_selected.copy()
                 st.text(f"food_selected_removed -> {food_selected_removed}")
-                food_selected_removed_lunch_dinner = []
-                food_items_random_lunch_dinner = []
-                food_selected_removed_coffee_1 = []
-                food_items_random_coffee_1 = []
-                food_selected_removed_coffee_2 = []
-                food_items_random_coffee_2 = []
-                for i, row in df_grouped.iterrows():
-                    if row['refeição'] == 'Almoço/Jantar':
-                        food_selected_removed_lunch_dinner = [i for i in row.alimento if i in food_selected_removed]
-                        try:
-                            food_items_random_lunch_dinner = random.sample(food_selected_removed_lunch_dinner, 2)
-                        except:
-                            food_items_random_lunch_dinner = random.sample(food_selected_removed_lunch_dinner, 1)
-                    elif row['refeição'] == 'Lanche da manhã':
-                        food_selected_removed_coffee_1 = [i for i in row.alimento if i in food_selected_removed]
-                        food_items_random_coffee_1 = random.sample(food_selected_removed_coffee_1, 1)
-                    else:
-                        food_selected_removed_coffee_2 = [i for i in row.alimento if i in food_selected_removed]
-                        food_items_random_coffee_2 = random.sample(food_selected_removed_coffee_2, 1)
+
+                food_selected_removed_lunch_dinner = [i for i in df_merge_filtered.query("refeição == 'Almoço ou Jantar'")['alimento'].tolist() if i in food_selected_removed]
+                if food_selected_removed_lunch_dinner:
+                    try:
+                        food_items_random_lunch_dinner = random.sample(food_selected_removed_lunch_dinner, 2)
+                    except:
+                        food_items_random_lunch_dinner = random.sample(food_selected_removed_lunch_dinner, 1)
+                else:
+                    food_items_random_lunch_dinner = []
+                food_selected_removed_coffee_1 = [i for i in df_merge_filtered.query("refeição == 'Lanche da manhã'")['alimento'].tolist() if i in food_selected_removed]
+                if food_selected_removed_coffee_1:
+                    food_items_random_coffee_1 = random.sample(food_selected_removed_coffee_1, 1)
+                else:
+                    food_items_random_coffee_1 = []
+                food_selected_removed_coffee_2 = [i for i in df_merge_filtered.query("refeição == 'Lanche da tarde'")['alimento'].tolist() if i in food_selected_removed]
+                if food_selected_removed_coffee_2:
+                    food_items_random_coffee_2 = random.sample(food_selected_removed_coffee_2, 1)
+                else:
+                    food_items_random_coffee_2 = []
                 food_items_random = food_items_random_lunch_dinner + food_items_random_coffee_1 + food_items_random_coffee_2
                 food_items_copy = food_items.copy()
                 st.text(f"food_items_random -> {food_items_random}")
                 for fi in food_items_random:
                     food_items_copy.remove(fi)
-            st.data_editor(df_result.merge(df_merge[['alimento', 'refeição']], on='alimento').sort_values(by=['day', 'refeição']))
+            
+            df_result = df_result.merge(df_merge[['alimento', 'refeição']], on='alimento').sort_values(by=['dia', 'refeição'])
+            df_result['alimento'] = df_result.apply(lambda x: x['alimento'].replace(x['refeição'], '').strip(), axis=1)
+            for meal in list(df_result['refeição'].unique()):
+                st.subheader(f"Cardápio para o {meal.lower()}")
+                st.data_editor(df_result.query(f"refeição == '{meal}'").pivot(index='alimento', columns='dia', values='qtd (g)') .fillna('-'))
+            st.subheader(f"Custo do cardápio por aluno e status do cálculo por dia")
+            st.data_editor(pd.concat([df_costs_status.pivot(columns='dia', values='custo').rename(index={0: 'Custo'}),
+                                        df_costs_status.pivot(columns='dia', values='status').rename(index={0: 'Status'})]).fillna('-'))
+            st.text('Se o status não for igual a Ótimo, tente adicionar mais alimentos na seleção ou adapte o cardápio gerado para aquele dia da forma que preferir.')
