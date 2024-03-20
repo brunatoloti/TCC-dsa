@@ -178,15 +178,15 @@ with st.sidebar:
                     prob += lpSum([carbs[f] * food_vars[f] for f in row['alimento']]) <= int(round(df_contraints_age_range.loc[loc_contraints + 1, 'Carboidratos']*ref, 0)) # limite superior
                     prob += lpSum([lip[f] * food_vars[f] for f in row['alimento']]) >= int(round(df_contraints_age_range.loc[loc_contraints, 'Lipidios']*ref, 0)) # limite inferior
                     prob += lpSum([lip[f] * food_vars[f] for f in row['alimento']]) <= int(round(df_contraints_age_range.loc[loc_contraints + 1, 'Lipidios']*ref, 0)) # limite superior
-                
-                status = prob.solve()
+                solver = get_solver('CPLEX_PY')
+                status = prob.solve(solver)
                 status = LpStatus[status]
                 food_selected = []
                 qtd_food_selected = []
                 for v in prob.variables():
                     if v.varValue > 0:
                         food_selected.append(v.name.replace('Food', '').replace('Rice', '').replace('Bean', '').replace('_', ' ').strip())
-                        qtd_food_selected.append(round(v.varValue, 4))
+                        qtd_food_selected.append(round(v.varValue, 3))
                 obj = value(prob.objective)
                 df_result_temp = pd.DataFrame({'alimento': food_selected, 'qtd (g)': qtd_food_selected, 'dia': f"dia {j}"})
                 df_result = pd.concat([df_result, df_result_temp])
