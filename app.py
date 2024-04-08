@@ -16,7 +16,7 @@ df_contraints = pd.read_excel("./data/alimentos_restricoes.xlsx")
 
 list_food = df['Alimento'].sort_values().unique().tolist()
 
-st.header("Cálculo do cardápio semanal de custo mínimo")
+st.header("Cardápios formulados")
 st.divider()
 
 if 'df' not in st.session_state:
@@ -29,7 +29,7 @@ if 'price' not in st.session_state:
 a1,a2,a3 = st.columns([5, 0.25, 0.1])
 
 with st.sidebar:
-    st.subheader('Seleção de alimentos usados na escola e seus preços no dia da pesquisa')
+    st.subheader('Seleção e preenchimento de informações para formulação de cardápios de custo mínimo')
 
     # de acordo com a PNAE
     list_ages = ["4 - 5 anos", "6 - 10 anos", "11 - 15 anos", "16 - 18 anos"]
@@ -40,7 +40,7 @@ with st.sidebar:
 
     qt_meals = st.selectbox("Selecione o período e a quantidade de refeições diárias:",
                             meals_period,
-                            index=None, placeholder='Selecione...')
+                            index=None, placeholder='Selecione...', disabled=not ages)
     
     if qt_meals == "Parcial manhã - 1 refeição por dia":
         meals = ['Lanche da manhã']
@@ -59,7 +59,8 @@ with st.sidebar:
         loc_contraints = 4
 
     food = st.selectbox("Selecione os alimentos usados na escola:", list_food, 
-                        index=None, placeholder='Selecione...', key='food_selection')
+                        index=None, placeholder='Selecione...', key='food_selection',
+                        disabled=not (qt_meals and ages))
 
     if food in list_food:
         meal_type_selection = st.selectbox("Selecione a refeição para qual esse alimento será usado:", meals,
@@ -103,16 +104,18 @@ with st.sidebar:
         st.session_state.df = st.session_state.df[st.session_state.df["deletar"] == False]
 
     st.subheader('Informações adicionais')
-
-    rice = st.radio("Deve ter arroz todos os dias?", ["Sim", "Não"], horizontal=True)
+    rice_options_selected = [r for r in st.session_state.df['alimento'].unique() if 'Arroz' in r]
+    rice = st.radio("Deve ter arroz todos os dias?", ["Sim", "Não"], horizontal=True, disabled=not rice_options_selected)
     rice_var = ''
     food_vars_rice = {}
-    bean = st.radio("Deve ter feijão todos os dias?", ["Sim", "Não"], horizontal=True)
+    bean_options_selected = [r for r in st.session_state.df['alimento'].unique() if 'Feijão' in r]
+    bean = st.radio("Deve ter feijão todos os dias?", ["Sim", "Não"], horizontal=True, disabled=not bean_options_selected)
     bean_var = ''
     food_vars_bean = {}
-    days = st.selectbox("Quantidade de dias para calcular o cardápio:", [1, 2, 3, 4, 5], index=None, placeholder='')
-        
-    if st.button("Salvar tudo e calcular o cardápio semanal de custo mínimo."):
+    days = st.selectbox("Quantidade de dias para calcular o cardápio:", [1, 2, 3, 4, 5], 
+                        index=None, placeholder='', disabled=st.session_state.df.empty)
+    
+    if st.button("Salvar tudo e formular o(s) cardápio(s) de custo mínimo.", disabled=st.session_state.df.empty):
         st.toast("OK")
         with a1:
             df_merge = st.session_state.df[["alimento", "preço", "refeição"]].merge(df, left_on='alimento', right_on='Alimento')
