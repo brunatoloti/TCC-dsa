@@ -203,7 +203,7 @@ with st.sidebar:
                     food_selected_removed = [fs for fs in food_selected if 'Feijão' not in fs]
                 else:
                     food_selected_removed = food_selected.copy()
-                st.text(f"food_selected_removed -> {food_selected_removed}")
+                # st.text(f"food_selected_removed -> {food_selected_removed}")
 
                 food_selected_removed_lunch_dinner = [i for i in df_merge_filtered.query("refeição == 'Almoço ou Jantar'")['alimento'].tolist() if i in food_selected_removed]
                 if food_selected_removed_lunch_dinner:
@@ -225,7 +225,7 @@ with st.sidebar:
                     food_items_random_coffee_2 = []
                 food_items_random = food_items_random_lunch_dinner + food_items_random_coffee_1 + food_items_random_coffee_2
                 food_items_copy = food_items.copy()
-                st.text(f"food_items_random -> {food_items_random}")
+                # st.text(f"food_items_random -> {food_items_random}")
                 for fi in food_items_random:
                     food_items_copy.remove(fi)
             
@@ -238,3 +238,13 @@ with st.sidebar:
             st.data_editor(pd.concat([df_costs_status.pivot(columns='dia', values='custo').rename(index={0: 'Custo'}),
                                         df_costs_status.pivot(columns='dia', values='status').rename(index={0: 'Status'})]).fillna('-'))
             st.text('Se o status não for igual a Ótimo, tente adicionar mais alimentos na seleção ou adapte o cardápio gerado para aquele dia da forma que preferir.')
+
+    st.divider()
+    with open("data/manual_utilizacao.pdf", "rb") as pdf_file:
+        document = pdf_file.read()
+        st.download_button(
+            label="Baixar manual de utilização da plataforma",
+            data=document,
+            file_name='manual_plataforma.pdf',
+            mime='application/pdf',
+        )
