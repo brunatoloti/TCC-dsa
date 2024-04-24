@@ -133,27 +133,19 @@ with st.sidebar:
                 carbs = dict(zip(food_items_copy, df_merge_filtered['Carboidratos (g)']))
                 lip = dict(zip(food_items_copy, df_merge_filtered['Lipídios (g)']))
 
-                if rice == 'Sim':
-                    for f in food_items_copy:
-                        if 'Arroz' in f:
-                            if ages == '4 - 5 anos':
-                                qt_rice = 0.3
-                            else:
-                                qt_rice = 0.5
-                            rice_var = f
-                            food_vars_rice = LpVariable.dicts("Rice", [rice_var], lowBound=qt_rice, upBound=qt_rice, cat='Continuous') # ou Integer
-                            break
-                if bean == 'Sim':
-                    for f in food_items_copy:
-                        if 'Feijão' in f:
-                            if ages == '4 - 5 anos':
-                                qt_bean = 0.15
-                            else:
-                                qt_bean = 0.25
-                            bean_var = f
-                            food_vars_bean = LpVariable.dicts("Bean", [bean_var], lowBound=qt_bean, upBound=qt_bean, cat='Continuous') # ou Integer
-                            break
-                food_vars = LpVariable.dicts("Food", [i for i in food_items_copy if i not in [rice_var, bean_var]], lowBound=0, cat='Continuous') # ou Integer
+                for f in food_items_copy:
+                    if 'Arroz' in f:
+                        qt_rice = 0.5
+                        rice_var = f
+                        food_vars_rice = LpVariable.dicts("Rice", [rice_var], lowBound=qt_rice, upBound=qt_rice, cat='Continuous')
+                        break
+                for f in food_items_copy:
+                    if 'Feijão' in f:
+                        qt_bean = 0.25
+                        bean_var = f
+                        food_vars_bean = LpVariable.dicts("Bean", [bean_var], lowBound=qt_bean, upBound=qt_bean, cat='Continuous')
+                        break
+                food_vars = LpVariable.dicts("Food", [i for i in food_items_copy if i not in [rice_var, bean_var]], lowBound=0, cat='Continuous')
                 food_vars.update(food_vars_rice)
                 food_vars.update(food_vars_bean)
 
