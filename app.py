@@ -181,8 +181,8 @@ with st.sidebar:
                 for v in prob.variables():
                     if v.varValue > 0:
                         food_selected.append(v.name.replace('Food', '').replace('Rice', '').replace('Bean', '').replace('_', ' ').strip())
-                        qtd_food_selected.append(round(v.varValue, 3))
-                obj = value(prob.objective)
+                        qtd_food_selected.append(f"{str(round(v.varValue * 100, 3)).replace('.', ',')}g")
+                obj = f"R$ {str(value(prob.objective)).replace('.', ',')}"
                 df_result_temp = pd.DataFrame({'alimento': food_selected, 'qtd (g)': qtd_food_selected, 'dia': f"dia {j}"})
                 df_result = pd.concat([df_result, df_result_temp])
                 df_costs_status_temp = pd.DataFrame({'dia': f"dia {j}", 'custo': [obj], 'status': status.replace('Infeasible', 'Inviável').replace('Optimal', 'Ótimo')})
@@ -225,7 +225,7 @@ with st.sidebar:
             df_result['alimento'] = df_result.apply(lambda x: x['alimento'].replace(x['refeição'], '').strip(), axis=1)
             for meal in list(df_result['refeição'].unique()):
                 st.subheader(f"Cardápio para o {meal.lower()}")
-                st.data_editor(df_result.query(f"refeição == '{meal}'").pivot(index='alimento', columns='dia', values='qtd (g)') .fillna('-'))
+                st.data_editor(df_result.query(f"refeição == '{meal}'").pivot(index='alimento', columns='dia', values='qtd (g)').fillna('-'))
             st.subheader(f"Custo do cardápio por aluno e status do cálculo por dia")
             st.data_editor(pd.concat([df_costs_status.pivot(columns='dia', values='custo').rename(index={0: 'Custo'}),
                                         df_costs_status.pivot(columns='dia', values='status').rename(index={0: 'Status'})]).fillna('-'))
