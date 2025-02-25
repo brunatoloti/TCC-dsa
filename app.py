@@ -195,7 +195,6 @@ with st.sidebar:
                     food_selected_removed = [fs for fs in food_selected if 'Feijão' not in fs]
                 else:
                     food_selected_removed = food_selected.copy()
-                # st.text(f"food_selected_removed -> {food_selected_removed}")
 
                 food_selected_removed_lunch_dinner = [i for i in df_merge_filtered.query("refeição == 'Almoço ou Jantar'")['alimento'].tolist() if i in food_selected_removed]
                 if food_selected_removed_lunch_dinner:
@@ -217,7 +216,6 @@ with st.sidebar:
                     food_items_random_coffee_2 = []
                 food_items_random = food_items_random_lunch_dinner + food_items_random_coffee_1 + food_items_random_coffee_2
                 food_items_copy = food_items.copy()
-                # st.text(f"food_items_random -> {food_items_random}")
                 for fi in food_items_random:
                     food_items_copy.remove(fi)
             
